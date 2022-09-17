@@ -92,12 +92,12 @@ def generate_cinematic_from_prompts(prompt_file, output_video_filename):
         video_filename = make_scene_video(dialogue_filename, art_filename)
         video_filenames.append(video_filename)
 
-    # Use ffmpeg to concatenate the videos into a single video
     with open("video_list.txt", "w") as f:
         for video_filename in video_filenames:
             f.write("file '{}'\n".format(video_filename))
-    subprocess.run(["ffmpeg", "-f", "concat", "-safe", "0", "-i", "video_list.txt", "-c", "copy", output_video_filename])
-
+    music_filename = os.path.expanduser("~/Music/royaltyfree-cc/epic/honor-and-sword-main-11222.mp3")
+    # With ffmpeg, concatenate the videos and add the music at 0.5 volume using -filter_complex amix
+    subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", "video_list.txt", "-i", music_filename, "-filter_complex", "[0:a]volume=1.0[voiceover];[1:a]volume=0.15[music];[voiceover][music]amerge=inputs=2", "-c:v", "libx264", "-crf", "23", "-preset", "veryfast", "-c:a", "aac", "-b:a", "192k", "-shortest", output_video_filename])
 
 def make_scene_video(input_wav_audio, input_jpg_frame):
     """ Call ffmpeg to make a video that displays the jpg frame and plays the wav audio """
@@ -125,5 +125,5 @@ if __name__ == "__main__":
     parser.add_argument("--story-json", help="JSON file where the story should be written", default="story_{}.json".format(int(time.time())))
     parser.add_argument("--output-video", help="Video file where the story should be written", default="story_{}.mp4".format(int(time.time())))
     args = parser.parse_args()
-    #generate_story_prompts(output_filename=args.story_json)
+    generate_story_prompts(output_filename=args.story_json)
     generate_cinematic_from_prompts(prompt_file=args.story_json, output_video_filename=args.output_video)
