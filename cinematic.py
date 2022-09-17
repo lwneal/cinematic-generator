@@ -40,7 +40,7 @@ Scene {}:
 THANK_YOU_NOW_REPEAT_IN_JSON_PROMPT = """
 ```
 
-Well done George, thank you. Now if you would kindly repeat all of the previous scenes but in JSON format, as a list of {} items with keys "dialogue"and "visualArtPrompt"
+Well done George, thank you. Now if you would kindly repeat all of the previous scenes but in JSON format, as a list of items, each containing "dialogue" and "visualArtPrompt" keys.
 
 JSON:
 ```"""
