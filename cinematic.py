@@ -16,20 +16,20 @@ def get_epic_music_mp3():
     music_files = [f for f in os.listdir(EPIC_MUSIC_DIR) if f.endswith(".mp3")]
     return os.path.join(EPIC_MUSIC_DIR, random.choice(music_files))
 
-
 INIT_PROMPT = """
 FOR GEORGE R. R. MARTIN
 
-Scroll of the Rings IV: Lords of the Orb is a massively multiplayer online virtual reality experience unlike anything the world has ever seen.
+{0}: {1} is a massively multiplayer online virtual reality experience unlike anything the world has ever seen.
 
-This highly awaited installment in the Scroll of the Rings series has brought together a cast of A-list Hollywood stars, as well as the best and brightest from the game industry and the world of digital art. The gripping story, stunning visuals, and immersive gameplay have led some reviewers to suggest LotO will be not just the greatest SotR game yet, but the greatest computer game ever made.
+This highly awaited installment in the {0} series has brought together a cast of A-list Hollywood stars, as well as the best and brightest from the game industry and the world of digital art. The gripping story, stunning visuals, and immersive gameplay have led some reviewers to suggest {1} will be not just the greatest {0} game yet, but the greatest game in history.
 
-Mr. Martin, we're honored that you've agreed to write the epic cinematic introduction to the game. The introduction consists of 12 scenes. You will be working with our concept artist Greg Rutkowski. For each scene, write two sentences: the dialogue to be voice-acted, and a visual art prompt describing the scene that Greg should paint. PLEASE REMEMBER: Greg is an incredible artist but he has amnesia, so each Visual Art Prompt must stand alone without reference to previous scenes.
+The worldbuilding and story are by George R. R. Martin and Brandon Sanderson. The story is a fantasy epic adventure, but also a historical allegory for the fall of the Roman Republic. The following cinematic introduces the main character.
+
+Mr. Martin, we're honored that you've agreed to write the epic cinematic introduction to the game. The introduction consists of {2} scenes. You will be working with our concept artist Greg Rutkowski. For each scene, write two sentences: the dialogue to be voice-acted, and a visual art prompt describing the scene that Greg should paint. Please remember: each Visual Art Prompt must stand alone without reference to previous scenes.
 
 Scene 1:
 ```
-Dialogue: "In the darkest of ages, Lords from across the Realm vie for control of an ancient and magical Orb"
-Visual Art Prompt:"""
+Dialogue: "It is said that"""
 
 
 NEXT_SCENE_PROMPT = """
@@ -45,16 +45,17 @@ Well done George, thank you. Now if you would kindly repeat all of the previous 
 JSON:
 ```"""
 
-def generate_story_prompts(output_filename, num_scenes=12):
+def generate_story_prompts(output_filename, num_scenes=12, series_name='Scroll of the Rings', game_name='Lords of the Orb'):
     """ The generate_story_prompts function uses GPT-3 to generate a sequence of
         dialogue and DALL-E / StableDiffusion art prompts.
         The prompts are saved to a JSON file.
     """
-    prompt = INIT_PROMPT
+
+    prompt = INIT_PROMPT.format(series_name, game_name, num_scenes)
     response = openai.Completion.create(
         model="text-davinci-002",
         prompt=prompt,
-        temperature=0.7,
+        temperature=0.75,
         max_tokens=255,
         stop='```',
     )
@@ -65,7 +66,7 @@ def generate_story_prompts(output_filename, num_scenes=12):
         response = openai.Completion.create(
             model="text-davinci-002",
             prompt=prompt,
-            temperature=0.7,
+            temperature=0.80,
             max_tokens=255,
             stop='```',
         )
@@ -75,7 +76,7 @@ def generate_story_prompts(output_filename, num_scenes=12):
     response = openai.Completion.create(
         model="text-davinci-002",
         prompt=prompt,
-        temperature=0.7,
+        temperature=0.6,
         max_tokens=2000,
         stop='```',
     )
@@ -128,7 +129,7 @@ def generate_cinematic_from_prompts(prompt_file, output_video_filename):
             
     music_filename = get_epic_music_mp3() 
     # With ffmpeg, concatenate the videos and add the music at 0.5 volume using -filter_complex amix
-    subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", "video_list.txt", "-i", music_filename, "-filter_complex", "[0:a]volume=1.0[voiceover];[1:a]volume=0.15[music];[voiceover][music]amerge=inputs=2", "-c:v", "libx264", "-crf", "23", "-preset", "veryfast", "-c:a", "aac", "-b:a", "192k", "-shortest", output_video_filename])
+    subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", "video_list.txt", "-i", music_filename, "-filter_complex", "[0:a]volume=1.0[voiceover];[1:a]volume=0.15[music];[voiceover][music]amix=inputs=2", "-c:v", "libx264", "-crf", "23", "-preset", "veryfast", "-c:a", "aac", "-b:a", "192k", "-shortest", output_video_filename])
 
     # Clean up by making a directory and moving all the scene_{%02d}* files into it
     output_dir = 'story_{}'.format(int(time.time()))
@@ -149,9 +150,16 @@ def generate_cinematic_from_prompts(prompt_file, output_video_filename):
 def make_scene_video(input_wav_audio, input_jpg_frame):
     """ Call ffmpeg to make a video that displays the jpg frame and plays the wav audio """
     output_filename = input_wav_audio.replace(".wav", ".mp4")
+
+    # Generate a video that scrolls inward in a Ken Burns effect
     # Make the video with the moov atom at the start, and yuv420p
-    subprocess.run(["ffmpeg", "-i", input_jpg_frame, "-i", input_wav_audio, 
-        "-movflags", "faststart", "-pix_fmt", "yuv420p", output_filename])
+    # Ensure that the input audio is muxed into the video
+    subprocess.run(["ffmpeg", "-y", "-i", input_jpg_frame, "-i", input_wav_audio,
+                    "-movflags", "+faststart", "-pix_fmt", "yuv420p",
+                    "-c:a", "aac", "-b:a", "192k",
+                    "-filter_complex", "scale=2048:2816, zoompan=z='min(zoom+0.0015,1.4)':d=400:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=512x704",
+                    "-shortest", output_filename])
+    
     return output_filename
 
 
