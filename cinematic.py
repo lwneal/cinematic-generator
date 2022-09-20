@@ -129,7 +129,18 @@ def generate_cinematic_from_prompts(prompt_file, output_video_filename):
             
     music_filename = get_epic_music_mp3() 
     # With ffmpeg, concatenate the videos and add the music at 0.5 volume using -filter_complex amix
-    subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", "video_list.txt", "-i", music_filename, "-filter_complex", "[0:a]volume=1.0[voiceover];[1:a]volume=0.15[music];[voiceover][music]amix=inputs=2", "-c:v", "libx264", "-crf", "23", "-preset", "veryfast", "-c:a", "aac", "-b:a", "192k", "-shortest", output_video_filename])
+    subprocess.run(["ffmpeg", "-y", "-f", "concat",
+                    "-safe", "0", "-i", "video_list.txt",
+                    "-i", music_filename,
+                    "-filter_complex",
+                    "[0:a]volume=1.0[voiceover];[1:a]volume=0.15[music];[voiceover][music]amix=inputs=2",
+                    "-c:v", "libx264",
+                    "-crf", "23",
+                    "-preset", "veryfast",
+                    "-c:a", "aac",
+                    "-b:a", "192k",
+                    "-shortest",
+                    output_video_filename])
 
     # Clean up by making a directory and moving all the scene_{%02d}* files into it
     output_dir = 'story_{}'.format(int(time.time()))
@@ -154,10 +165,16 @@ def make_scene_video(input_wav_audio, input_jpg_frame):
     # Generate a video that scrolls inward in a Ken Burns effect
     # Make the video with the moov atom at the start, and yuv420p
     # Ensure that the input audio is muxed into the video
-    subprocess.run(["ffmpeg", "-y", "-i", input_jpg_frame, "-i", input_wav_audio,
-                    "-movflags", "+faststart", "-pix_fmt", "yuv420p",
-                    "-c:a", "aac", "-b:a", "192k",
-                    "-filter_complex", "scale=2048:2816, zoompan=z='min(zoom+0.0015,1.4)':d=400:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=512x704",
+    subprocess.run(["ffmpeg", "-y",
+                    "-i", input_jpg_frame,
+                    "-i", input_wav_audio,
+                    "-movflags", "+faststart",
+                    "-pix_fmt", "yuv420p",
+                    "-c:a", "aac",
+                    "-b:a", "192k",
+                    "-ac", "1",
+                    "-filter_complex",
+                    "scale=3072:4224, zoompan=z='min(zoom+0.0015,1.4)':d=500:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=512x704",
                     "-shortest", output_filename])
     
     return output_filename
