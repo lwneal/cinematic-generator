@@ -17,22 +17,24 @@ def get_epic_music_mp3():
     return os.path.join(EPIC_MUSIC_DIR, random.choice(music_files))
 
 INIT_PROMPT = """
-History of the World: The Battle of Antietam 
+History of the World: The Fall of Constantinople
 
 History of the World is a detailed, accurate, and compelling documentary series that brings historical events to life. This highly awaited documentary has brought together a cast of A-list Hollywood stars, as well as the best and brightest historians and artists. The gripping story and stunning visuals have led some reviewers to suggest History of the World may be the greatest documentary film of all time.
 
-The topic of this chapter is the Battle of Antietam.
+The topic of this chapter is the Fall of Constantinople
 
 Background Information:
 ```
-The Battle of Antietam (/ænˈtiːtəm/), or Battle of Sharpsburg particularly in the Southern United States, was a battle of the American Civil War fought on September 17, 1862, between Confederate Gen. Robert E. Lee's Army of Northern Virginia and Union Gen. George B. McClellan's Army of the Potomac near Sharpsburg, Maryland and Antietam Creek. Part of the Maryland Campaign, it was the first field army–level engagement in the Eastern Theater of the American Civil War to take place on Union soil. It remains the bloodiest day in American history, with a combined tally of 22,717 dead, wounded, or missing.[11][12] Although the Union army suffered heavier casualties than the Confederates, the battle was a major turning point in the Union's favor.
+The Fall of Constantinople, also known as the Conquest of Constantinople, was the capture of the capital of the Byzantine Empire by the Ottoman Empire. The city fell on 29 May 1453[10][11]—the culmination of a 53-day siege which had begun on 6 April—marking the end of the Middle Ages.
 
-After pursuing Confederate Gen. Robert E. Lee into Maryland, Maj. Gen. George B. McClellan of the Union Army launched attacks against Lee's army who were in defensive positions behind Antietam Creek. At dawn on September 17, Maj. Gen. Joseph Hooker's corps mounted a powerful assault on Lee's left flank. Attacks and counterattacks swept across Miller's Cornfield, and fighting swirled around the Dunker Church. Union assaults against the Sunken Road eventually pierced the Confederate center, but the Federal advantage was not followed up. In the afternoon, Union Maj. Gen. Ambrose Burnside's corps entered the action, capturing a stone bridge over Antietam Creek and advancing against the Confederate right. At a crucial moment, Confederate Maj. Gen. A. P. Hill's division arrived from Harpers Ferry and launched a surprise counterattack, driving back Burnside and ending the battle. Although outnumbered two-to-one, Lee committed his entire force, while McClellan sent in less than three-quarters of his army, enabling Lee to fight the Federals to a standstill. During the night, both armies consolidated their lines. In spite of crippling casualties, Lee continued to skirmish with McClellan throughout September 18, while removing his battered army south of the Potomac River.[13]
+The attacking Ottoman Army, which significantly outnumbered Constantinople's defenders, was commanded by the 21-year-old Sultan Mehmed II (later nicknamed "the Conqueror"), while the Byzantine army was led by Emperor Constantine XI Palaiologos. After conquering the city, Mehmed II made Constantinople the new Ottoman capital, replacing Adrianople.
 
-McClellan successfully turned Lee's invasion back, making the battle a Union victory, but President Abraham Lincoln, unhappy with McClellan's general pattern of overcaution and his failure to pursue the retreating Lee, relieved McClellan of command in November. From a tactical standpoint, the battle was somewhat inconclusive; the Union army successfully repelled the Confederate invasion but suffered heavier casualties and failed to defeat Lee's army outright. However, it was a significant turning point in the war in favor of the Union due in large part to its political ramifications: the battle's result gave Lincoln the political confidence to issue the Emancipation Proclamation, declaring all those held as slaves within enemy territory free. This effectively discouraged the British and French governments from recognizing the Confederacy, as neither power wished to give the appearance of supporting slavery. 
+The conquest of Constantinople and the fall of the Byzantine Empire was a watershed of the Late Middle Ages, marking the effective end of the last remains of the Roman Empire, a state which began in roughly 27 BC and had lasted nearly 1500 years. Among many modern historians, the Fall of Constantinople is considered the end of the medieval period.[12][13] The city's fall also stood as a turning point in military history. Since ancient times, cities and castles had depended upon ramparts and walls to repel invaders. The Walls of Constantinople, especially the Theodosian Walls, were some of the most advanced defensive systems in the world at the time. These fortifications were overcome with the use of gunpowder, specifically in the form of large cannons and bombards, heralding a change in siege warfare.[14]
 ```
 
-We're honored that you've agreed to write this compelling, epic, gripping and detailed chapter of the documentary. The chapter consists of 12 scenes, summarizing all events in the Background Information and describing their broader historical importance. You will be working with our concept artist Greg Rutkowski. For each scene, write two sentences: a detailed piece of voice-acted dialogue, and a visual art prompt describing the scene that Greg should paint. Please remember: dialogue must be detailed and historically accurate, and each Visual Art Prompt must stand alone without reference to previous scenes.
+We're honored that you've agreed to write this compelling, epic, gripping and detailed chapter of the documentary. The chapter consists of 12 scenes, narrating the events in the Background Information. Be specific, and make the history interesting by comparing and relating it to other times and places.
+
+You will be working with our concept artist Greg Rutkowski. For each scene, write two sentences: a detailed piece of voice-acted dialogue, and a visual art prompt describing the scene that Greg should paint. Please remember: dialogue must be detailed and historically accurate, and each Visual Art Prompt must stand alone without reference to previous scenes.
 
 Scene 1:
 ```
@@ -168,22 +170,31 @@ def generate_cinematic_from_prompts(prompt_file, output_video_filename):
 def make_scene_video(input_wav_audio, input_jpg_frame):
     """ Call ffmpeg to make a video that displays the jpg frame and plays the wav audio """
     output_filename = input_wav_audio.replace(".wav", ".mp4")
+    tmp_video_filename = input_wav_audio.replace(".wav", ".mjpeg")
 
     # Generate a video that scrolls inward in a Ken Burns effect
-    # Make the video with the moov atom at the start, and yuv420p
-    # Ensure that the input audio is muxed into the video
     subprocess.run(["ffmpeg", "-y",
                     "-i", input_jpg_frame,
-                    "-i", input_wav_audio,
-                    "-movflags", "+faststart",
-                    "-pix_fmt", "yuv420p",
-                    "-c:a", "aac",
-                    "-b:a", "192k",
-                    "-ac", "1",
                     "-filter_complex",
                     "scale=3072:4224, zoompan=z='min(zoom+0.0015,1.4)':d=500:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=512x704",
-                    "-shortest", output_filename])
+                    tmp_video_filename])
     
+    # Mix the video and audio together to generate the output file
+    # Make the video with the moov atom at the start, and yuv420p
+    # Ensure that the input audio is mono
+    subprocess.run(["ffmpeg", "-y",
+                    "-i", tmp_video_filename,
+                    "-i", input_wav_audio,
+                    "-ac", "1",
+                    "-shortest",
+                    "-movflags", "+faststart",
+                    "-pix_fmt", "yuv420p",
+                    output_filename])
+
+    # Delete the temporary video file
+    os.remove(tmp_video_filename)
+    return output_filename
+
     return output_filename
 
 
